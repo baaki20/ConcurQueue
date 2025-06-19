@@ -33,34 +33,9 @@ public class ConcurQueueSystem {
         this.taskTracker = new TaskTracker();
         this.tasksProcessedCount = new AtomicInteger(0);
 
-        ThreadFactory producerThreadFactory = new ThreadFactory() {
-            private final AtomicInteger counter = new AtomicInteger(1);
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread thread = new Thread(r);
-                thread.setName("Producer-" + counter.getAndIncrement());
-                return thread;
-            }
-        };
-
-        ThreadFactory workerThreadFactory = new ThreadFactory() {
-            private final AtomicInteger counter = new AtomicInteger(1);
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread thread = new Thread(r);
-                thread.setName("Worker-" + counter.getAndIncrement());
-                return thread;
-            }
-        };
-
-        ThreadFactory monitorThreadFactory = new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread thread = new Thread(r);
-                thread.setName("Monitor-Thread");
-                return thread;
-            }
-        };
+        ThreadFactory producerThreadFactory = createThreadFactory("Producer-", true);
+        ThreadFactory workerThreadFactory = createThreadFactory("Worker-", true);
+        ThreadFactory monitorThreadFactory = createThreadFactory("Monitor-Thread", false);
 
         this.producerPool = Executors.newFixedThreadPool(numProducers, producerThreadFactory);
         this.workerPool = Executors.newFixedThreadPool(numWorkers, workerThreadFactory);
@@ -69,6 +44,29 @@ public class ConcurQueueSystem {
         initializeProducers(numProducers, tasksPerProducer, producerIntervalSeconds);
         initializeWorkers(numWorkers);
         initializeMonitor(monitoringIntervalSeconds);
+    }
+
+    private ThreadFactory createThreadFactory(String namePrefix, boolean numbered) {
+        if (numbered) {
+            return new ThreadFactory() {
+                private final AtomicInteger counter = new AtomicInteger(1);
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread thread = new Thread(r);
+                    thread.setName(namePrefix + counter.getAndIncrement());
+                    return thread;
+                }
+            };
+        } else {
+            return new ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread thread = new Thread(r);
+                    thread.setName(namePrefix);
+                    return thread;
+                }
+            };
+        }
     }
 
     private void initializeProducers(int numProducers, int tasksPerProducer, long producerIntervalSeconds) {
