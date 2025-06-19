@@ -9,45 +9,39 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class SynchronizationDemo {
 
-    // Unsafe counter for race condition demonstration
     private static int unsafeCounter = 0;
     private static final Object lock1 = new Object();
     private static final Object lock2 = new Object();
 
     public static void main(String[] args) {
         System.out.println("=== SYNCHRONIZATION CHALLENGES DEMONSTRATION ===\n");
-
-        // 1. Race Condition Demo
         demonstrateRaceCondition();
-
-        // 2. Race Condition Fix Demo
         demonstrateRaceConditionFix();
-
-        // 3. Deadlock Demo
         demonstrateDeadlock();
-
-        // 4. Deadlock Prevention Demo
         demonstrateDeadlockPrevention();
     }
 
     /**
      * Demonstrates race condition with unsafe counter
+     *
+     * Note: Race conditions are non-deterministic and may not always be observed in every run.
+     * The absence of a race condition in a single run does NOT mean the code is thread-safe.
      */
     private static void demonstrateRaceCondition() {
         System.out.println("1. RACE CONDITION DEMONSTRATION");
         System.out.println("Starting 10 threads, each incrementing unsafe counter 1000 times...");
+        System.out.println("NOTE: Race conditions are non-deterministic. You may not see an incorrect result every time,");
+        System.out.println("but the code is still unsafe and can fail unpredictably on different runs or systems.\n");
 
         unsafeCounter = 0;
         ExecutorService executor = Executors.newFixedThreadPool(10);
         CountDownLatch latch = new CountDownLatch(10);
 
-        // Start 10 threads that increment the unsafe counter
         for (int i = 0; i < 10; i++) {
             final int threadId = i;
             executor.submit(() -> {
                 for (int j = 0; j < 1000; j++) {
-                    // RACE CONDITION: Multiple threads accessing unsafeCounter without synchronization
-                    unsafeCounter++; // This is NOT thread-safe!
+                    unsafeCounter++;
                 }
                 System.out.printf("Thread-%d finished incrementing%n", threadId);
                 latch.countDown();
@@ -60,7 +54,8 @@ public class SynchronizationDemo {
             if (unsafeCounter != 10000) {
                 System.out.println("❌ RACE CONDITION DETECTED! Lost updates due to unsafe access.");
             } else {
-                System.out.println("✅ No race condition detected this time (but it's still unsafe!)");
+                System.out.println("⚠️  No race condition detected this time (but it's still unsafe!)");
+                System.out.println("    Try running the program multiple times or on different hardware to observe the issue.");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -77,33 +72,27 @@ public class SynchronizationDemo {
         System.out.println("2. RACE CONDITION FIX DEMONSTRATION");
         System.out.println("Using AtomicInteger and synchronized blocks...");
 
-        // Solution 1: AtomicInteger
         AtomicInteger atomicCounter = new AtomicInteger(0);
-
-        // Solution 2: Synchronized counter
         SynchronizedCounter syncCounter = new SynchronizedCounter();
 
         ExecutorService executor = Executors.newFixedThreadPool(10);
-        CountDownLatch latch = new CountDownLatch(20); // 10 threads for each solution
-
-        // Test AtomicInteger
+        CountDownLatch latch = new CountDownLatch(20);
         for (int i = 0; i < 10; i++) {
             final int threadId = i;
             executor.submit(() -> {
                 for (int j = 0; j < 1000; j++) {
-                    atomicCounter.incrementAndGet(); // Thread-safe atomic operation
+                    atomicCounter.incrementAndGet();
                 }
                 System.out.printf("AtomicCounter Thread-%d finished%n", threadId);
                 latch.countDown();
             });
         }
 
-        // Test Synchronized counter
         for (int i = 0; i < 10; i++) {
             final int threadId = i;
             executor.submit(() -> {
                 for (int j = 0; j < 1000; j++) {
-                    syncCounter.increment(); // Thread-safe synchronized method
+                    syncCounter.increment();
                 }
                 System.out.printf("SyncCounter Thread-%d finished%n", threadId);
                 latch.countDown();
@@ -131,13 +120,11 @@ public class SynchronizationDemo {
         System.out.println("Creating two threads that will deadlock...");
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-
-        // Thread 1: Acquires lock1 then tries to acquire lock2
         executor.submit(() -> {
             synchronized (lock1) {
                 System.out.println("Thread-1: Acquired lock1, trying to acquire lock2...");
                 try {
-                    Thread.sleep(100); // Give Thread-2 time to acquire lock2
+                    Thread.sleep(100);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -147,12 +134,11 @@ public class SynchronizationDemo {
             }
         });
 
-        // Thread 2: Acquires lock2 then tries to acquire lock1
         executor.submit(() -> {
             synchronized (lock2) {
                 System.out.println("Thread-2: Acquired lock2, trying to acquire lock1...");
                 try {
-                    Thread.sleep(100); // Give Thread-1 time to acquire lock1
+                    Thread.sleep(100);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
@@ -162,11 +148,10 @@ public class SynchronizationDemo {
             }
         });
 
-        // Wait for deadlock to occur
         try {
             Thread.sleep(2000);
             System.out.println("❌ DEADLOCK OCCURRED! Threads are waiting for each other.");
-            executor.shutdownNow(); // Force shutdown
+            executor.shutdownNow();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -186,7 +171,6 @@ public class SynchronizationDemo {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch latch = new CountDownLatch(2);
 
-        // Both threads acquire locks in the same order: lockA first, then lockB
         executor.submit(() -> {
             synchronized (lockA) {
                 System.out.println("Thread-1: Acquired lockA");
@@ -203,7 +187,7 @@ public class SynchronizationDemo {
         });
 
         executor.submit(() -> {
-            synchronized (lockA) { // Same order: lockA first
+            synchronized (lockA) {
                 System.out.println("Thread-2: Acquired lockA");
                 try {
                     Thread.sleep(100);
